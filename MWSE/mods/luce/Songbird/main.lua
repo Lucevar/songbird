@@ -61,18 +61,20 @@ end
 
 local function constructListEntry(parent, songName, songPath)
     local block = parent:createSideBySideBlock({})
+    block.parent = parent
+    mwse.log("Block parent: %s", block.parent)
 
     local favouriteButton = block:createButton({
         buttonText = "+",
         description = "Add song " .. songName .. " to your favourites list",
         callback = function()
-            mwse.log("Added " .. songName .. " to favourites list")
+            log:debug("Added " .. songName .. " to favourites list")
             local track = { fileName = songName, filePath = songPath }
-            mwse.log(json.encode(config.favourites))
-            mwse.log(json.encode(track))
             config.favourites[songName] = track
         end
     })
+    favouriteButton.parent = block
+    mwse.log("%s", favouriteButton.parent)
 
     local songButton = block:createButton({
         buttonText = "Play " .. songName,
@@ -200,11 +202,9 @@ local function addFavourites(favouritesPage)
         local favouriteButton = block:createButton({
             buttonText = "-",
             description = "Remove song " .. track.fileName .. " from your favourites list",
-            callback = function()
+            callback = function(self)
                 mwse.log("Removed " .. track.fileName .. " from favourites list")
                 config.favourites[track.fileName] = nil
-                favouritesPage:getContentElement():destroyChildren()
-                addFavourites(favouritesPage)
             end
         })
     
@@ -219,7 +219,7 @@ local function addFavourites(favouritesPage)
     end
 end
 
-local function constructFavouritesPage(template, favouritesPage)
+local function constructFavouritesPage(favouritesPage)
     addHeader(favouritesPage)
     addSettings(favouritesPage)
     addFavourites(favouritesPage)
@@ -231,7 +231,7 @@ local function registerModConfig()
     template:saveOnClose(configPath, config)
 
     local favouritesPage = template:createSideBarPage({ label = "Favourites" })
-    constructFavouritesPage(template, favouritesPage)
+    constructFavouritesPage(favouritesPage)
 
     for folderName in pairs(config.foldersEnabled) do
         constructPage(template, folderName)
