@@ -6,13 +6,17 @@ local config = mwse.loadConfig(configPath, {
     foldersEnabled = { 
         ["Explore"] = true, 
         ["Battle"] = true
-    }
+    },
+    favourites = {}
  })
 
-local creditsList = "abot, Spammer, NullCascade, Merlord, Hrnchamd, kindi, longod, svengineer: "
+--  { songName = "Morrowind Title.mp3", songPath = "Data Files/Music/Explore/Morrowind Title.mp3" },
+--  { songName = "Gone By Day.mp3", songPath = "Data Files/Music/Explore/Gone By Day.mp3" }
+local creditsList = "* abot, Spammer, NullCascade, Merlord, Hrnchamd, kindi, longod, svengineer, OperatorJack: "
   .. "I spent so much time looking at your code trying to figure out how the heck Lua works\n"
-  .. "Herbert for your kind explanations of how the UI code works \n" 
-  .. "DimNussens for Baandari Dreams which inspired me to make this mod"
+  .. "* Herbert for your kind explanations of how the UI code works and getting the hotkey working for me\n"
+  .. "* Safebox for help and advice about how lua works\n" 
+  .. "* DimNussens for Baandari Dreams which inspired me to make this mod"
 
 local logger = require("logging.logger")
 local log = logger.new({ 
@@ -56,7 +60,21 @@ local function playSong(song)
 end
 
 local function constructListEntry(parent, songName, songPath)
-    local button = parent:createButton({
+    local block = parent:createSideBySideBlock({})
+
+    local favouriteButton = block:createButton({
+        buttonText = "+",
+        description = "Add song " .. songName .. " to your favourites list",
+        callback = function()
+            mwse.log("Added " .. songName .. " to favourites list")
+            local track = { fileName = songName, filePath = songPath }
+            mwse.log(json.encode(config.favourites))
+            mwse.log(json.encode(track))
+            config.favourites[songName] = track
+        end
+    })
+
+    local songButton = block:createButton({
         buttonText = "Play " .. songName,
         description = "Details: \n \n" .. songName .. "\n" .. songPath,
         indent = 10,
@@ -74,56 +92,43 @@ local function constructSongList(page, songTable)
     end
 end
 
-local function openSongbirdMenu()
-    -- local mcmModList = tes3ui.findMenu(tes3ui.registerID("MWSE:ModConfigMenu")).children
+-- thank you herbert
+local function openSongbirdMenu(menu)
+    if menu then
+        local mcm = menu:findChild("MenuOptions_MCM_container")
+        if mcm then
+            mcm:triggerEvent("mouseClick")
+            -- return true
+        end
+        local mcmModList = tes3ui.findMenu("MWSE:ModConfigMenu").children
+        for child in table.traverse(mcmModList) do
+            if child.text == modName then
+                child:triggerEvent("mouseClick")
+            end
+        end
+    end
+    return false
+end
 
-    -- for child in table.traverse(mcmModList) do
-    --     if child.text == "Songbird" then
-    --         child:triggerEvent("mouseClick")
-    --     end
-    -- end
-
-    -- local menu = tes3ui.findMenu(tes3ui.registerID("MWSE:ModConfigMenu"))
-    local mcmMenu = tes3ui.registerID("MWSE:ModConfigMenu")
-    mwse.log("%s", mcmMenu)
-
-    local optionsMenu = tes3ui.registerID("MenuOptions")
-    mwse.log("%s", optionsMenu)
-
-    -- if (tes3ui.findMenu(optionsMenu)) then
-    --     tes3ui.leaveMenuMode()
-    -- end
-
-    tes3ui.enterMenuMode(tes3ui.findMenu((optionsMenu)))
-    -- local menu = tes3ui.findMenu("MWSE:ModConfigMenu")
-    -- local found = tes3ui.findMenu(menu)
-    -- mwse.log("found %s", found)
-    -- mwse.log("menu %s", menu)
-    -- if ( menu == nil ) then
-    --     mwse.log("Menu nil")
-    --     return
-    -- end
-
-    -- tes3ui.enterMenuMode("MWSE:ModConfigMenu") -> enters menu mode but blank screen
-    -- tes3ui.enterMenuMode(tes3ui.registerID("MWSE:ModConfigMenu")) -> enters menu mode but blank screen
-    -- tes3ui.enterMenuMode(menu)
-    -- tes3ui.enterMenuMode(tes3ui.findMenu(tes3ui.registerID("MWSE:ModConfigMenu"))) -> right click menu
-
-    -- if (tes3ui.findMenu(tes3ui.registerID("MWSE:ModConfigMenu"))) then
-    --     tes3ui.leaveMenuMode()
-    -- end
-
-    -- local mcmModList = tes3ui.findMenu(menu).children
-    -- mwse.log("%s", mcmModList)
-
-    -- tes3ui.enterMenuMode(tes3ui.findMenu(tes3ui.registerID("MWSE:ModConfigMenu")))
-    -- mwse.log("Attempting to enter menu mode %s", menu)
-    -- tes3ui.enterMenuMode(menu)
+-- thank you herbert
+local function songbirdShortcut()
+    -- if we couldn't open the menu
+    if not openSongbirdMenu(tes3ui.findMenu("MenuOptions")) then
+        -- get the key that opens the options menu, and then press it
+        local inputConfig = tes3.getInputBinding(tes3.keybind.menuMode) 
+        if inputConfig.device == 1 then -- device == 1 means it's a keyboard key. idk how to make this work on mouse buttons
+            tes3.tapKey(inputConfig.code)
+            -- as soon as the menu opens, click the mcm button
+            event.register("uiActivated", function(e)
+                openSongbirdMenu(e.element)
+            end, { filter = "MenuOptions", priority=-1, doOnce=true })
+        end
+    end
 end
 
 local function addHeader(page)
     -- Header
-    page.sidebar:createInfo({ text = string.upper(modName) .. " " .. version })
+    local title = page.sidebar:createInfo({ text = string.upper(modName) .. " " .. version })
     page.sidebar:createInfo({ text = "A mod by Lucevar"})
     page.sidebar:createHyperLink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
     page.sidebar:createHyperLink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
@@ -143,7 +148,7 @@ local function addSettings(page)
 
     -- Settings: Access Hotkey
     settingsCategory:createKeyBinder{ 
-        label = "Hotkey to access Songbird menu: ", 
+        label = "Set hotkey to access Songbird menu", 
         allowCombinations = true, 
         variable = mwse.mcm.createTableVariable{
             id = "accessMenuKey", 
@@ -154,7 +159,7 @@ local function addSettings(page)
                 isShiftDown = false, 
                 isAltDown = false, 
                 isControlDown = false, 
-                isSuperDown = false}
+                isSuperDown = false }
             }
         }
 
@@ -186,10 +191,47 @@ local function constructPage(template, folderName)
     constructSongList(page, constructSongTableFromFolder(folderName))
 end
 
+local function addFavourites(favouritesPage)
+    -- local category = favouritesPage:createCategory({ label = "Songs" })
+    for i, track in pairs(config.favourites) do
+        mwse.log("Favourite found: %s", track.fileName)
+        local block = favouritesPage:createSideBySideBlock({})
+
+        local favouriteButton = block:createButton({
+            buttonText = "-",
+            description = "Remove song " .. track.fileName .. " from your favourites list",
+            callback = function()
+                mwse.log("Removed " .. track.fileName .. " from favourites list")
+                config.favourites[track.fileName] = nil
+                favouritesPage:getContentElement():destroyChildren()
+                addFavourites(favouritesPage)
+            end
+        })
+    
+        local songButton = block:createButton({
+            buttonText = "Play " .. track.fileName,
+            description = "Details: \n \n" .. track.fileName .. "\n" .. track.filePath,
+            indent = 10,
+            callback = function()
+                playSong(track.filePath)
+            end
+        })
+    end
+end
+
+local function constructFavouritesPage(template, favouritesPage)
+    addHeader(favouritesPage)
+    addSettings(favouritesPage)
+    addFavourites(favouritesPage)
+end
+
 local function registerModConfig()
     -- Initialise template
     local template = mwse.mcm.createTemplate({ name = modName })
     template:saveOnClose(configPath, config)
+
+    local favouritesPage = template:createSideBarPage({ label = "Favourites" })
+    constructFavouritesPage(template, favouritesPage)
 
     for folderName in pairs(config.foldersEnabled) do
         constructPage(template, folderName)
@@ -204,5 +246,5 @@ local function initialized()
 end
 
 event.register(tes3.event.modConfigReady, registerModConfig)
-event.register(tes3.event.keyDown, openSongbirdMenu, { filter = config.accessMenuKey.keyCode })
+event.register(tes3.event.keyDown, songbirdShortcut, { filter = config.accessMenuKey.keyCode })
 event.register(tes3.event.initialized, initialized)
