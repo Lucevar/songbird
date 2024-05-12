@@ -6,6 +6,10 @@ Lua Mod for Morrowind that allows you to choose a song to play from among your i
 * Select an individual track to play without having to wait for the music engine to randomly select it
 
 ## Changelog
+### Version 0.03
+* Hotkey is working (thanks Herbert!)
+* Favourites are working - as long as you restart the game. Still need to sort out real-time refreshing.
+
 ### Version 0.02
 * Refactored mcm to automatically generate pages from folders defined in config
 * Refactored logging
