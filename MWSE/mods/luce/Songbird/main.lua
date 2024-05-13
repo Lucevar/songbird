@@ -193,13 +193,15 @@ local function constructPage(template, folderName)
     constructSongList(page, constructSongTableFromFolder(folderName))
 end
 
-local function addFavourites(favouritesPage)
-    -- local category = favouritesPage:createCategory({ label = "Songs" })
-    for i, track in pairs(config.favourites) do
-        mwse.log("Favourite found: %s", track.fileName)
-        local block = favouritesPage:createSideBySideBlock({})
+local function addFavourites(favList)
 
-        local favouriteButton = block:createButton({
+    for i, track in pairs(config.favourites) do
+        local sideBlock = favList:createSideBySideBlock()
+        sideBlock.flowDirection = "left_to_right"
+
+        mwse.log("Favourite found: %s", track.fileName)
+
+        local favouriteButton = sideBlock:createButton({
             buttonText = "-",
             description = "Remove song " .. track.fileName .. " from your favourites list",
             callback = function(self)
@@ -208,7 +210,7 @@ local function addFavourites(favouritesPage)
             end
         })
     
-        local songButton = block:createButton({
+        local songButton = sideBlock:createButton({
             buttonText = "Play " .. track.fileName,
             description = "Details: \n \n" .. track.fileName .. "\n" .. track.filePath,
             indent = 10,
@@ -216,13 +218,20 @@ local function addFavourites(favouritesPage)
                 playSong(track.filePath)
             end
         })
+
     end
 end
 
 local function constructFavouritesPage(favouritesPage)
     addHeader(favouritesPage)
     addSettings(favouritesPage)
-    addFavourites(favouritesPage)
+    local favList = favouritesPage:createCategory({ 
+        postCreate = function(favList)
+            mwse.log("hello")
+            mwse.log("%s", favList.widget)
+            mwse.log(json.encode(favList.widget))
+        end })
+    addFavourites(favList)
 end
 
 local function registerModConfig()
