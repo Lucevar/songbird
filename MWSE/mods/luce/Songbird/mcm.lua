@@ -1,5 +1,8 @@
 local this = {}
 
+local explorePanes = {}
+local labelBlock = {}
+
 local function playSong(song)
     tes3.worldController.audioController:changeMusicTrack(song)
 end
@@ -174,17 +177,6 @@ end
 --     end
 -- end
 
-local function createOptionsBlock(optionsBlock)
-    local exploreButton = optionsBlock:createButton()
-    exploreButton.text = "Explore"
-
-    local battleButton = optionsBlock:createButton()
-    battleButton.text = "Battle"
-
-    local optionsButton = optionsBlock:createButton()
-    optionsButton.text = "Options"
-end
-
 local function constructFavourites(favouritesPane)
     for _, track in pairs(this.config.exploreFavourites) do
         local row = favouritesPane:createBlock({})
@@ -213,13 +205,92 @@ local function constructFavourites(favouritesPane)
     end
 end
 
-function this.onCreate(parent)
-    -- local pane = baseContainer:createVerticalScrollPane({ id = "pane" })
-    -- pane:createButton({ text = "Blah"})
-    -- local favouritesList = constructFavourites(pane)
-    -- -- addOtherLists(pane)
+local function createExplorePanes(page, explorePanes)
+    explorePanes = page:createBlock()
+    explorePanes.widthProportional = 1
+    explorePanes.heightProportional = 3.1
+    explorePanes.flowDirection = "left_to_right"
 
-    local page = parent:createThinBorder({})
+    local favouritesPane = explorePanes:createVerticalScrollPane()
+    favouritesPane.widthProportional = 1
+    favouritesPane.heightProportional = 1
+    favouritesPane.paddingAllSides = 12
+    favouritesPane = favouritesPane:getContentElement()
+
+    constructFavourites(favouritesPane)
+
+    local explorePane = explorePanes:createVerticalScrollPane()
+    explorePane.widthProportional = 1
+    explorePane.heightProportional = 1
+    explorePane.paddingAllSides = 12
+    explorePane = explorePane:getContentElement()
+
+    for _, track in pairs(getSongTable("Explore")) do
+        local row = explorePane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 1
+        row.autoHeight = true
+        row.autoWidth = true
+        local addFaveButton = row:createButton({ text = "+" })
+        addFaveButton.paddingAllSides = 2
+        addFaveButton.maxWidth = 25
+        addFaveButton:register("mouseClick", function(e)
+            this.config.exploreFavourites[track.fileName] = track
+            favouritesPane:destroyChildren()
+            constructFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            playSong(track.filePath)
+        end)
+    end
+
+    explorePanes:getTopLevelMenu():updateLayout()
+end
+
+local function createOptionsBlock(optionsBlock)
+    local exploreButton = optionsBlock:createButton()
+    exploreButton.text = "Explore"
+    exploreButton:register("mouseClick", function(e)
+        if(explorePanes.visible == true) then
+            mwse.log("Visible true, set false")
+            for _, paneChild in pairs(explorePanes.children) do
+                paneChild.visible = false
+            end
+            for _, labelChild in pairs(labelBlock.children) do
+                labelChild.visible = false
+            end
+            explorePanes.visible = false
+            labelBlock:getTopLevelMenu():updateLayout()
+            explorePanes:getTopLevelMenu():updateLayout()
+            -- return
+        end
+        if (explorePanes.visible == false) then
+            mwse.log("False, set true")
+            for _, paneChild in pairs(explorePanes.children) do
+                paneChild.visible = true
+            end
+            for _, labelChild in pairs(labelBlock.children) do
+                labelChild.visible = true
+            end
+            explorePanes.visible = true
+            labelBlock:getTopLevelMenu():updateLayout()
+            explorePanes:getTopLevelMenu():updateLayout()
+            -- return
+        end
+    end)
+
+    local battleButton = optionsBlock:createButton()
+    battleButton.text = "Battle"
+
+    local optionsButton = optionsBlock:createButton()
+    optionsButton.text = "Options"
+end
+
+function this.onCreate(parent)
+    page = parent:createThinBorder({})
     page.flowDirection = "top_to_bottom"
     page.heightProportional = 1.0
     page.widthProportional = 1.0
@@ -228,7 +299,7 @@ function this.onCreate(parent)
     -- header
     local mainHeaderBlock = page:createBlock()
     mainHeaderBlock.widthProportional = 1
-    mainHeaderBlock.heightProportional = 0.7
+    mainHeaderBlock.heightProportional = 0.6
     mainHeaderBlock.flowDirection = "top_to_bottom"
     mainHeaderBlock.childAlignX = 0.5
     mainHeaderBlock.paddingAllSides = 4
@@ -243,7 +314,7 @@ function this.onCreate(parent)
     optionsBlock.paddingAllSides = 2
     createOptionsBlock(optionsBlock)
 
-    local labelBlock = page:createBlock()
+    labelBlock = page:createBlock()
     labelBlock.widthProportional = 1
     labelBlock.heightProportional = 0.1
     labelBlock.flowDirection = "left_to_right"
@@ -253,65 +324,16 @@ function this.onCreate(parent)
     leftLabel.childAlignX = 0.5
     local favouritesLabel = leftLabel:createLabel({ text = "Favourites" })
     favouritesLabel.paddingAllSides = 2
+    favouritesLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
     local rightLabel = labelBlock:createBlock()
     rightLabel.widthProportional = 1
     rightLabel.heightProportional = 1
     rightLabel.childAlignX = 0.5
-    local exploreLabel = rightLabel:createLabel({ text = "Songs" })
-    exploreLabel.paddingAllSides = 2
+    local songsLabel = rightLabel:createLabel({ text = "Songs" })
+    songsLabel.paddingAllSides = 2
+    songsLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
     
-    local panes = page:createBlock()
-    panes.widthProportional = 1
-    panes.heightProportional = 2.7
-    panes.flowDirection = "left_to_right"
-
-    local favouritesPane = panes:createVerticalScrollPane()
-    favouritesPane.widthProportional = 1
-    favouritesPane.heightProportional = 1
-    favouritesPane.paddingAllSides = 12
-    favouritesPane = favouritesPane:getContentElement()
-
-    constructFavourites(favouritesPane)
-
-    local explorePane = panes:createVerticalScrollPane()
-    explorePane.widthProportional = 1
-    explorePane.heightProportional = 1
-    explorePane.paddingAllSides = 12
-    explorePane = explorePane:getContentElement()
-
-    -- local headerBlock = explorePane:createBlock()
-    -- headerBlock.widthProportional = 1
-    -- headerBlock.heightProportional = 1
-    -- local headerLabel = headerBlock:createLabel()
-    -- headerLabel.text = "Explore Songs"
-
-    for _, track in pairs(getSongTable("Explore")) do
-        local row = explorePane:createBlock({})
-        row.flowDirection = "left_to_right"
-        row.borderBottom = 1
-        row.autoHeight = true
-        row.autoWidth = true
-        -- row.widthProportional = 1
-        -- row.heightProportional = 1
-        -- row.childAlignY = 0.5
-        local addFaveButton = row:createButton({ text = "+" })
-        addFaveButton.paddingAllSides = 2
-        addFaveButton.maxWidth = 25
-        addFaveButton:register("mouseClick", function(e)
-            this.config.exploreFavourites[track.fileName] = track
-            mwse.log(json.encode(this.config.exploreFavourites))
-            favouritesPane:destroyChildren()
-            constructFavourites(favouritesPane)
-            favouritesPane:getTopLevelMenu():updateLayout()
-        end)
-
-        local songButton = row:createButton({ text = track.fileName })
-        -- songButton.wrapText = true
-        -- songButton.autoWidth = true
-        songButton:register("mouseClick", function(e)
-            playSong(track.filePath)
-        end)
-    end
+    createExplorePanes(page, explorePanes)
 
 end
 
