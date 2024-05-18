@@ -1,7 +1,11 @@
 local this = {}
 
-local explorePanes = {}
+local page = {}
+local mainHeaderBlock = {}
+local battlePanes = {}
+local explorePage = {}
 local labelBlock = {}
+local optionsPage = {}
 
 local function playSong(song)
     tes3.worldController.audioController:changeMusicTrack(song)
@@ -15,37 +19,6 @@ local function getCurrentTrack()
         return track
     end
 end
-
--- local function constructExploreFavourites(pane)
---     -- mwse.log(json.encode(pane:getContentElement().children))
-
---     if (pane.children) then
---         pane:destroyChildren()
---     end
-
---     for _, track in pairs(this.config.exploreFavourites) do
---         local block = pane:createBlock({ label = "Block"})
---         block.flowDirection = "left_to_right"
---         block.layoutWidthFraction = 1.0
---         block.layoutHeightFraction = 1.0
-
---         local removeButton = block:createButton({ text = "-"})
---         removeButton.widthProportional = 0.1
---         removeButton:register("mouseClick", function(e)
---             this.config.favourites[track.fileName] = nil
---             mwse.log(json.encode(this.config.exploreFavourites))
---             constructFavourites(pane)
---         end)
-
---         local songButton = block:createButton({
---             text = track.fileName
---         })
---         songButton:register("mouseClick", function(e)
---             playSong(track.filePath)
---         end)
---         songButton.widthProportional = 1.0
---     end
--- end
 
 -- -- thank you herbert
 -- local function openSongbirdMenu(menu)
@@ -81,13 +54,31 @@ end
 --     end
 -- end
 
-local function createHeader(mainHeaderBlock)
+local function createCurrentTrackBlock()
+
+end
+
+-- musicSelectTrack
+
+local function createHeader()
     -- Header
     -- local title = mainHeaderBlock:createInfo({ text = string.upper(modName) .. " " .. version })
-    local title = mainHeaderBlock:createLabel({ text = "SONGBIRD" })
-    mainHeaderBlock:createLabel({ text = "A mod by Lucevar \n"})
-    mainHeaderBlock:createHyperlink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
-    mainHeaderBlock:createHyperlink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
+    local currentTrack = nil
+    if(mainHeaderBlock.children ~= nil) then
+        mainHeaderBlock:destroyChildren()
+    end
+    local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
+    local currentSongLabel = mainHeaderBlock:createLabel({ text = "Currently Playing: "})
+    currentSongLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
+    currentTrack = mainHeaderBlock:createLabel({ text = getCurrentTrack() })
+    mwse.log(currentTrack.text)
+    currentTrack.text = tostring(getCurrentTrack())
+    mwse.log(currentTrack.text)
+    currentTrack:getTopLevelMenu():updateLayout()
+    mwse.log(currentTrack.text)
+    -- mainHeaderBlock:createLabel({ text = "A mod by Lucevar \n"})
+    -- mainHeaderBlock:createHyperlink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
+    -- mainHeaderBlock:createHyperlink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
     -- mainHeaderBlock:createInfo({ text = ""})
 
     -- -- Current Track
@@ -98,30 +89,43 @@ local function createHeader(mainHeaderBlock)
     --     end })
 end
 
--- local function addSettings(page)
---     -- Settings
---     local settingsCategory = page.sidebar:createCategory({ label = "Settings" })
+local function addSettings()
+    -- Settings
+    local settingsHeader = optionsPage:createBlock()
+    settingsHeader.widthProportional = 1
+    settingsHeader.widthProportional = 0.3
+    settingsHeader.childAlignX = 0.5
 
---     -- Settings: Access Hotkey
---     settingsCategory:createKeyBinder{ 
---         label = "Set hotkey to access Songbird menu", 
---         allowCombinations = true, 
---         variable = mwse.mcm.createTableVariable{
---             id = "accessMenuKey", 
---             table = config, 
---             restartRequired = false, 
---             defaultSetting = { 
---                 keyCode = tes3.scanCode.m, 
---                 isShiftDown = false, 
---                 isAltDown = false, 
---                 isControlDown = false, 
---                 isSuperDown = false }
---             }
---         }
+    local title = settingsHeader:createLabel({ text = "SONGBIRD" })
+    settingsHeader:createLabel({ text = "A mod by Lucevar \n"})
+    settingsHeader:createHyperlink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
+    settingsHeader:createHyperlink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
 
---     local creditsCategory = page.sidebar:createCategory({ label = "Credits"})
---     creditsCategory:createInfo({ text = creditsList })
--- end
+    local settingsCategory = optionsPage:createLabel({ text = "Settings" })
+    settingsCategory.color = tes3ui.getPalette(tes3.palette.headerColor)
+
+    local hotkeyLabel = optionsPage:createLabel({ text = "Set a hotkey to open the Songbird menu: "})
+    local hotkeyButton = optionsPage:createButton({ text = this.config.accessMenuKey })
+    -- Settings: Access Hotkey
+    -- settingsCategory:createKeyBinder{ 
+    --     label = "Set hotkey to access Songbird menu", 
+    --     allowCombinations = true, 
+    --     variable = mwse.mcm.createTableVariable{
+    --         id = "accessMenuKey", 
+    --         table = config, 
+    --         restartRequired = false, 
+    --         defaultSetting = { 
+    --             keyCode = tes3.scanCode.m, 
+    --             isShiftDown = false, 
+    --             isAltDown = false, 
+    --             isControlDown = false, 
+    --             isSuperDown = false }
+    --         }
+    --     }
+
+    -- local creditsCategory = page.sidebar:createCategory({ label = "Credits"})
+    -- creditsCategory:createInfo({ text = creditsList })
+end
 
 local function getSongTable(folderName)
     local songTable = {}
@@ -139,43 +143,6 @@ local function getSongTable(folderName)
     end
     return songTable
 end
-
--- local function constructSongList(pane, songTable)
---     mwse.log("Constructing song list")
---     for _, track in pairs(songTable) do
---         local block = pane:createBlock({ })
---         block.flowDirection = "left_to_right"
---         block.layoutWidthFraction = 1.0
---         -- block.layoutHeightFraction = 1.0
---         -- block.autoWidth = true
---         block.autoHeight = true
-
---         local addButton = block:createButton({ text = "+"})
---         addButton.widthProportional = 0.1
---         addButton.paddingAllSides = 6
---         addButton:register("mouseClick", function(e)
---             this.config.favourites[track.fileName] = track
---             mwse.log(json.encode(this.config.favourites))
---             constructFavourites(pane)
---             pane:getTopLevelMenu():updateLayout()
---         end)
-
---         local songButton = block:createButton({
---             text = track.fileName
---         })
---         -- songButton.wrapText = true
---         songButton:register("mouseClick", function(e)
---             playSong(track.filePath)
---         end)
---         songButton.widthProportional = 1.0
---     end
--- end
-
--- local function addOtherLists(pane)
---     for folderName in pairs(this.config.foldersEnabled) do
---         constructSongList(pane, getSongTable(folderName))
---     end
--- end
 
 local function constructFavourites(favouritesPane)
     for _, track in pairs(this.config.exploreFavourites) do
@@ -197,124 +164,27 @@ local function constructFavourites(favouritesPane)
         end)
 
         local songButton = row:createButton({ text = track.fileName })
-        -- songButton.wrapText = true
-        -- songButton.autoWidth = true
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
+        end)
+        songButton:registerAfter("mouseClick", function(e)
+            local timer = timer.start({ 
+                type = timer.real, 
+                duration = 0.5,
+                callback = createHeader })
         end)
     end
 end
 
-local function createExplorePanes(page, explorePanes)
-    explorePanes = page:createBlock()
-    explorePanes.widthProportional = 1
-    explorePanes.heightProportional = 3.1
-    explorePanes.flowDirection = "left_to_right"
+local function createExplorePanes()
+    mwse.log("creating explore panes")
 
-    local favouritesPane = explorePanes:createVerticalScrollPane()
-    favouritesPane.widthProportional = 1
-    favouritesPane.heightProportional = 1
-    favouritesPane.paddingAllSides = 12
-    favouritesPane = favouritesPane:getContentElement()
+    explorePage = page:createBlock()
+    explorePage.widthProportional = 1
+    explorePage.heightProportional = 2.5
+    explorePage.flowDirection = "top_to_bottom"
 
-    constructFavourites(favouritesPane)
-
-    local explorePane = explorePanes:createVerticalScrollPane()
-    explorePane.widthProportional = 1
-    explorePane.heightProportional = 1
-    explorePane.paddingAllSides = 12
-    explorePane = explorePane:getContentElement()
-
-    for _, track in pairs(getSongTable("Explore")) do
-        local row = explorePane:createBlock({})
-        row.flowDirection = "left_to_right"
-        row.borderBottom = 1
-        row.autoHeight = true
-        row.autoWidth = true
-        local addFaveButton = row:createButton({ text = "+" })
-        addFaveButton.paddingAllSides = 2
-        addFaveButton.maxWidth = 25
-        addFaveButton:register("mouseClick", function(e)
-            this.config.exploreFavourites[track.fileName] = track
-            favouritesPane:destroyChildren()
-            constructFavourites(favouritesPane)
-            favouritesPane:getTopLevelMenu():updateLayout()
-        end)
-
-        local songButton = row:createButton({ text = track.fileName })
-        songButton:register("mouseClick", function(e)
-            playSong(track.filePath)
-        end)
-    end
-
-    explorePanes:getTopLevelMenu():updateLayout()
-end
-
-local function createOptionsBlock(optionsBlock)
-    local exploreButton = optionsBlock:createButton()
-    exploreButton.text = "Explore"
-    exploreButton:register("mouseClick", function(e)
-        if(explorePanes.visible == true) then
-            mwse.log("Visible true, set false")
-            for _, paneChild in pairs(explorePanes.children) do
-                paneChild.visible = false
-            end
-            for _, labelChild in pairs(labelBlock.children) do
-                labelChild.visible = false
-            end
-            explorePanes.visible = false
-            labelBlock:getTopLevelMenu():updateLayout()
-            explorePanes:getTopLevelMenu():updateLayout()
-            -- return
-        end
-        if (explorePanes.visible == false) then
-            mwse.log("False, set true")
-            for _, paneChild in pairs(explorePanes.children) do
-                paneChild.visible = true
-            end
-            for _, labelChild in pairs(labelBlock.children) do
-                labelChild.visible = true
-            end
-            explorePanes.visible = true
-            labelBlock:getTopLevelMenu():updateLayout()
-            explorePanes:getTopLevelMenu():updateLayout()
-            -- return
-        end
-    end)
-
-    local battleButton = optionsBlock:createButton()
-    battleButton.text = "Battle"
-
-    local optionsButton = optionsBlock:createButton()
-    optionsButton.text = "Options"
-end
-
-function this.onCreate(parent)
-    page = parent:createThinBorder({})
-    page.flowDirection = "top_to_bottom"
-    page.heightProportional = 1.0
-    page.widthProportional = 1.0
-    page.paddingAllSides = 12
-    page.wrapText = true
-    -- header
-    local mainHeaderBlock = page:createBlock()
-    mainHeaderBlock.widthProportional = 1
-    mainHeaderBlock.heightProportional = 0.6
-    mainHeaderBlock.flowDirection = "top_to_bottom"
-    mainHeaderBlock.childAlignX = 0.5
-    mainHeaderBlock.paddingAllSides = 4
-
-    createHeader(mainHeaderBlock)
-
-    local optionsBlock = page:createBlock()
-    optionsBlock.widthProportional = 1
-    optionsBlock.heightProportional = 0.20
-    optionsBlock.flowDirection = "left_to_right"
-    optionsBlock.childAlignX = 0.5
-    optionsBlock.paddingAllSides = 2
-    createOptionsBlock(optionsBlock)
-
-    labelBlock = page:createBlock()
+    local labelBlock = explorePage:createBlock()
     labelBlock.widthProportional = 1
     labelBlock.heightProportional = 0.1
     labelBlock.flowDirection = "left_to_right"
@@ -332,12 +202,156 @@ function this.onCreate(parent)
     local songsLabel = rightLabel:createLabel({ text = "Songs" })
     songsLabel.paddingAllSides = 2
     songsLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
-    
-    createExplorePanes(page, explorePanes)
 
+    local explorePanes = explorePage:createBlock()
+    explorePanes.widthProportional = 1
+    explorePanes.heightProportional = 2.4
+    explorePanes.flowDirection = "left_to_right"
+
+    local favouritesPane = explorePanes:createVerticalScrollPane()
+    favouritesPane.widthProportional = 1
+    favouritesPane.heightProportional = 1
+    favouritesPane.paddingAllSides = 12
+    favouritesPane = favouritesPane:getContentElement()
+
+    constructFavourites(favouritesPane)
+
+    local explorePane = explorePanes:createVerticalScrollPane()
+    explorePane.widthProportional = 1
+    explorePane.heightProportional = 1
+    explorePane.paddingAllSides = 8
+    explorePane = explorePane:getContentElement()
+
+    for _, track in pairs(getSongTable("Explore")) do
+        local row = explorePane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 1
+        row.autoHeight = true
+        row.autoWidth = true
+        local addFaveButton = row:createButton({ text = "+" })
+        addFaveButton.paddingAllSides = 1
+        addFaveButton.maxWidth = 25
+        addFaveButton:register("mouseClick", function(e)
+            this.config.exploreFavourites[track.fileName] = track
+            favouritesPane:destroyChildren()
+            constructFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            mwse.log("mouseclick")
+            playSong(track.filePath)
+        end)
+        songButton:registerAfter("mouseClick", function(e)
+            mwse.log("Starting timer")
+            local timer = timer.start({ 
+                type = timer.real, 
+                duration = 1,
+                callback = createHeader()})
+        end)
+    end
+
+    mwse.log(explorePanes.visible)
+    explorePanes:getTopLevelMenu():updateLayout()
+    return explorePanes
 end
 
--- event.register(tes3.event.modConfigReady, onModConfigReady)
+-- page with the mod-level options
+local function createOptionsPage()
+    optionsPage = page:createBlock()
+    optionsPage.widthProportional = 1
+    optionsPage.heightProportional = 3.1
+    optionsPage.flowDirection = "top_to_bottom"
+
+    addSettings()
+end
+
+    -- the block with the explore / battle / options buttons
+local function createOptionsBlock(optionsBlock)
+    local exploreButton = optionsBlock:createButton()
+    exploreButton.text = "Explore"
+    exploreButton:register("mouseClick", function(e)
+        if(explorePage.visible == true) then
+            for _, pageChild in pairs(explorePage.children) do
+                pageChild.visible = false
+            end
+            -- for _, labelChild in pairs(labelBlock.children) do
+            --     labelChild.visible = false
+            -- end
+            explorePage.visible = false
+            -- labelBlock:getTopLevelMenu():updateLayout()
+            -- explorePanes:getTopLevelMenu():updateLayout()
+            return
+        end
+        if (explorePage.visible == false) then
+            for _, pageChild in pairs(explorePage.children) do
+                pageChild.visible = true
+            end
+            -- for _, labelChild in pairs(labelBlock.children) do
+            --     labelChild.visible = true
+            -- end
+            explorePage.visible = true
+            optionsPage.visible = false
+            -- labelBlock:getTopLevelMenu():updateLayout()
+            -- explorePanes:getTopLevelMenu():updateLayout()
+            return
+        end
+    end)
+
+    local battleButton = optionsBlock:createButton()
+    battleButton.text = "Battle"
+
+    local optionsButton = optionsBlock:createButton()
+    optionsButton.text = "Options"
+    optionsButton:register("mouseClick", function(e)
+        if(optionsPage.visible == true) then
+            for _, optionChild in pairs(optionsPage.children) do
+                optionChild.visible = false
+            end
+            optionsPage.visible = false
+            return
+        end
+        if(optionsPage.visible == false) then
+            explorePage.visible = false
+            for _, optionChild in pairs(optionsPage.children) do
+                optionChild.visible = true
+            end
+            optionsPage.visible = true
+        end
+    end)
+end
+
+function this.onCreate(parent)
+    page = parent:createThinBorder({})
+    page.flowDirection = "top_to_bottom"
+    page.heightProportional = 1.0
+    page.widthProportional = 1.0
+    page.paddingAllSides = 12
+    page.wrapText = true
+    -- header
+    mainHeaderBlock = page:createBlock()
+    mainHeaderBlock.widthProportional = 1
+    mainHeaderBlock.heightProportional = 0.4
+    mainHeaderBlock.flowDirection = "top_to_bottom"
+    mainHeaderBlock.childAlignX = 0.5
+    mainHeaderBlock.paddingAllSides = 2
+
+    createHeader()
+
+    local optionsBlock = page:createBlock()
+    optionsBlock.widthProportional = 1
+    optionsBlock.heightProportional = 0.20
+    optionsBlock.flowDirection = "left_to_right"
+    optionsBlock.childAlignX = 0.5
+    optionsBlock.paddingAllSides = 2
+    createOptionsBlock(optionsBlock)
+    
+    createExplorePanes()
+    createOptionsPage()
+    explorePage.visible = true
+    optionsPage.visible = false
+end
 
 function this.onClose(_)
     mwse.saveConfig("Songbird", this.config)
