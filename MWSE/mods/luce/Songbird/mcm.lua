@@ -7,6 +7,11 @@ local explorePage = {}
 local labelBlock = {}
 local optionsPage = {}
 local currentTrack = {}
+local creditsList = "* Spammer, NullCascade, Merlord, Hrnchamd, abot, kindi, longod, svengineer, OperatorJack: "
+  .. "I spent so much time looking at your code trying to figure out how the heck Lua works\n"
+  .. "* Herbert for your encouragement and kind explanations of how the UI code works and getting the hotkey working for me\n"
+  .. "* Safebox for help and advice about how lua works and for listening to a heck of a lot of frustrated ranting\n" 
+  .. "* DimNussens for Baandari Dreams which inspired me to make this mod"
 
 local function playSong(song)
     tes3.worldController.audioController:changeMusicTrack(song)
@@ -21,52 +26,18 @@ local function getCurrentTrack()
     end
 end
 
--- -- thank you herbert
--- local function openSongbirdMenu(menu)
---     if menu then
---         local mcm = menu:findChild("MenuOptions_MCM_container")
---         if mcm then
---             mcm:triggerEvent("mouseClick")
---             -- return true
---         end
---         local mcmModList = tes3ui.findMenu("MWSE:ModConfigMenu").children
---         for child in table.traverse(mcmModList) do
---             if child.text == modName then
---                 child:triggerEvent("mouseClick")
---             end
---         end
---     end
---     return false
--- end
-
--- -- thank you herbert
--- local function songbirdShortcut()
---     -- if we couldn't open the menu
---     if not openSongbirdMenu(tes3ui.findMenu("MenuOptions")) then
---         -- get the key that opens the options menu, and then press it
---         local inputConfig = tes3.getInputBinding(tes3.keybind.menuMode) 
---         if inputConfig.device == 1 then -- device == 1 means it's a keyboard key. idk how to make this work on mouse buttons
---             tes3.tapKey(inputConfig.code)
---             -- as soon as the menu opens, click the mcm button
---             event.register("uiActivated", function(e)
---                 openSongbirdMenu(e.element)
---             end, { filter = "MenuOptions", priority=-1, doOnce=true })
---         end
---     end
--- end
-
 -- musicSelectTrack
 
 local function createHeader()
     -- Header
-    -- local title = mainHeaderBlock:createInfo({ text = string.upper(modName) .. " " .. version })
-    -- local currentTrack = nil
     if(mainHeaderBlock.children ~= nil) then
-        if (currentTrack.text ~= nil) then
-            currentTrack.text = nil
-        end
+        -- if (currentTrack ~= nil) then
+        --     if (currentTrack.text ~= nil) then
+        --         currentTrack.text = nil
+        --     end
+        -- end
         mainHeaderBlock:destroyChildren()
-        currentTrack.text = getCurrentTrack()
+        -- currentTrack.text = getCurrentTrack()
         mainHeaderBlock:getTopLevelMenu():updateLayout()
     end
     local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
@@ -80,21 +51,28 @@ end
 
 local function addSettings()
     -- Settings
+    local settingsCategory = optionsPage:createLabel({ text = "Settings" })
+    settingsCategory.color = tes3ui.getPalette(tes3.palette.headerColor)
+
+    local hotkeyLabel = optionsPage:createLabel({ text = "Set a hotkey to open the Songbird menu. Default is m (for 'music'). "})
+    local key = tostring(this.config.accessMenuKey["keyCode"])
+    local hotkeyButton = optionsPage:createButton({ text = key })
+
     local settingsHeader = optionsPage:createBlock()
     settingsHeader.widthProportional = 1
-    settingsHeader.widthProportional = 0.3
+    settingsHeader.heightProportional = 0.5
     settingsHeader.childAlignX = 0.5
+    settingsHeader.flowDirection = "top_to_bottom"
 
-    local title = settingsHeader:createLabel({ text = "SONGBIRD" })
+    local creditsTitle = settingsHeader:createLabel({ text = "Credits" })
+    creditsTitle.color = tes3ui.getPalette(tes3.palette.headerColor)
+
     settingsHeader:createLabel({ text = "A mod by Lucevar \n"})
     settingsHeader:createHyperlink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
     settingsHeader:createHyperlink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
 
-    local settingsCategory = optionsPage:createLabel({ text = "Settings" })
-    settingsCategory.color = tes3ui.getPalette(tes3.palette.headerColor)
-
-    local hotkeyLabel = optionsPage:createLabel({ text = "Set a hotkey to open the Songbird menu: "})
-    local hotkeyButton = optionsPage:createButton({ text = this.config.accessMenuKey })
+    local credits = optionsPage:createLabel({ text = creditsList })
+    credits.wrapText = true
     -- Settings: Access Hotkey
     -- settingsCategory:createKeyBinder{ 
     --     label = "Set hotkey to access Songbird menu", 
@@ -112,8 +90,6 @@ local function addSettings()
     --         }
     --     }
 
-    -- local creditsCategory = page.sidebar:createCategory({ label = "Credits"})
-    -- creditsCategory:createInfo({ text = creditsList })
 end
 
 local function getSongTable(folderName)
@@ -146,7 +122,6 @@ local function constructBattleFavourites(favouritesPane)
         removeFaveButton.paddingAllSides = 2
         removeFaveButton:register("mouseClick", function(e)
             this.config.battleFavourites[track.fileName] = nil
-            mwse.log(json.encode(this.config.battleFavourites))
             favouritesPane:destroyChildren()
             constructBattleFavourites(favouritesPane)
             favouritesPane:getTopLevelMenu():updateLayout()
@@ -178,7 +153,6 @@ local function constructExploreFavourites(favouritesPane)
         removeFaveButton.paddingAllSides = 2
         removeFaveButton:register("mouseClick", function(e)
             this.config.exploreFavourites[track.fileName] = nil
-            mwse.log(json.encode(this.config.exploreFavourites))
             favouritesPane:destroyChildren()
             constructExploreFavourites(favouritesPane)
             favouritesPane:getTopLevelMenu():updateLayout()
@@ -198,8 +172,6 @@ local function constructExploreFavourites(favouritesPane)
 end
 
 local function createBattlePage()
-    mwse.log("creating battle page")
-
     battlePage = page:createBlock()
     battlePage.widthProportional = 1
     battlePage.heightProportional = 2.5
@@ -270,15 +242,9 @@ local function createBattlePage()
             end })
         end)
     end
-
-    mwse.log(battlePanes.visible)
-    battlePanes:getTopLevelMenu():updateLayout()
-    return battlePanes
 end
 
 local function createExplorePage()
-    mwse.log("creating explore panes")
-
     explorePage = page:createBlock()
     explorePage.widthProportional = 1
     explorePage.heightProportional = 2.5
@@ -350,9 +316,6 @@ local function createExplorePage()
         end)
     end
 
-    mwse.log(explorePanes.visible)
-    explorePanes:getTopLevelMenu():updateLayout()
-    return explorePanes
 end
 
 -- page with the mod-level options
@@ -374,26 +337,16 @@ local function createOptionsBlock(optionsBlock)
             for _, pageChild in pairs(explorePage.children) do
                 pageChild.visible = false
             end
-            -- for _, labelChild in pairs(labelBlock.children) do
-            --     labelChild.visible = false
-            -- end
             explorePage.visible = false
-            -- labelBlock:getTopLevelMenu():updateLayout()
-            -- explorePanes:getTopLevelMenu():updateLayout()
             return
         end
         if (explorePage.visible == false) then
             for _, pageChild in pairs(explorePage.children) do
                 pageChild.visible = true
             end
-            -- for _, labelChild in pairs(labelBlock.children) do
-            --     labelChild.visible = true
-            -- end
             explorePage.visible = true
             optionsPage.visible = false
             battlePage.visible = false
-            -- labelBlock:getTopLevelMenu():updateLayout()
-            -- explorePanes:getTopLevelMenu():updateLayout()
             return
         end
     end)
@@ -405,26 +358,16 @@ local function createOptionsBlock(optionsBlock)
             for _, pageChild in pairs(battlePage.children) do
                 pageChild.visible = false
             end
-            -- for _, labelChild in pairs(labelBlock.children) do
-            --     labelChild.visible = false
-            -- end
             battlePage.visible = false
-            -- labelBlock:getTopLevelMenu():updateLayout()
-            -- explorePanes:getTopLevelMenu():updateLayout()
             return
         end
         if (battlePage.visible == false) then
             for _, pageChild in pairs(battlePage.children) do
                 pageChild.visible = true
             end
-            -- for _, labelChild in pairs(labelBlock.children) do
-            --     labelChild.visible = true
-            -- end
             battlePage.visible = true
             optionsPage.visible = false
             explorePage.visible = false
-            -- labelBlock:getTopLevelMenu():updateLayout()
-            -- explorePanes:getTopLevelMenu():updateLayout()
             return
         end
     end)
