@@ -2,10 +2,11 @@ local this = {}
 
 local page = {}
 local mainHeaderBlock = {}
-local battlePanes = {}
+local battlePage = {}
 local explorePage = {}
 local labelBlock = {}
 local optionsPage = {}
+local currentTrack = {}
 
 local function playSong(song)
     tes3.worldController.audioController:changeMusicTrack(song)
@@ -54,39 +55,27 @@ end
 --     end
 -- end
 
-local function createCurrentTrackBlock()
-
-end
-
 -- musicSelectTrack
 
 local function createHeader()
     -- Header
     -- local title = mainHeaderBlock:createInfo({ text = string.upper(modName) .. " " .. version })
-    local currentTrack = nil
+    -- local currentTrack = nil
     if(mainHeaderBlock.children ~= nil) then
+        if (currentTrack.text ~= nil) then
+            currentTrack.text = nil
+        end
         mainHeaderBlock:destroyChildren()
+        currentTrack.text = getCurrentTrack()
+        mainHeaderBlock:getTopLevelMenu():updateLayout()
     end
     local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
     local currentSongLabel = mainHeaderBlock:createLabel({ text = "Currently Playing: "})
     currentSongLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
     currentTrack = mainHeaderBlock:createLabel({ text = getCurrentTrack() })
-    mwse.log(currentTrack.text)
     currentTrack.text = tostring(getCurrentTrack())
-    mwse.log(currentTrack.text)
     currentTrack:getTopLevelMenu():updateLayout()
-    mwse.log(currentTrack.text)
-    -- mainHeaderBlock:createLabel({ text = "A mod by Lucevar \n"})
-    -- mainHeaderBlock:createHyperlink({ text = "Visit on Nexus", url = "https://www.nexusmods.com/morrowind"})
-    -- mainHeaderBlock:createHyperlink({ text = "Visit on Github", url = "https://github.com/Lucevar/songbird" })
-    -- mainHeaderBlock:createInfo({ text = ""})
-
-    -- -- Current Track
-    -- local currentTrackCategory = mainHeaderBlock:createCategory({ label = "Currently Playing:"})
-    -- currentTrackCategory:createInfo({ text = getCurrentTrack(),
-    --     postCreate = function(self)
-    --         self.elements.info.text = getCurrentTrack()
-    --     end })
+    currentTrack:getTopLevelMenu():updateLayout()
 end
 
 local function addSettings()
@@ -144,7 +133,39 @@ local function getSongTable(folderName)
     return songTable
 end
 
-local function constructFavourites(favouritesPane)
+local function constructBattleFavourites(favouritesPane)
+    for _, track in pairs(this.config.battleFavourites) do
+        local row = favouritesPane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 5
+        row.autoHeight = true
+        row.autoWidth = true
+        -- row.childAlignY = 0.5
+
+        local removeFaveButton = row:createButton({ text = "-" })
+        removeFaveButton.paddingAllSides = 2
+        removeFaveButton:register("mouseClick", function(e)
+            this.config.battleFavourites[track.fileName] = nil
+            mwse.log(json.encode(this.config.battleFavourites))
+            favouritesPane:destroyChildren()
+            constructBattleFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            playSong(track.filePath)
+            local timer = timer.start({ 
+                        type = timer.real, 
+                        duration = 1.5,
+                        callback = function()
+                            createHeader()
+            end})
+        end)
+    end
+end
+
+local function constructExploreFavourites(favouritesPane)
     for _, track in pairs(this.config.exploreFavourites) do
         local row = favouritesPane:createBlock({})
         row.flowDirection = "left_to_right"
@@ -159,24 +180,103 @@ local function constructFavourites(favouritesPane)
             this.config.exploreFavourites[track.fileName] = nil
             mwse.log(json.encode(this.config.exploreFavourites))
             favouritesPane:destroyChildren()
-            constructFavourites(favouritesPane)
+            constructExploreFavourites(favouritesPane)
             favouritesPane:getTopLevelMenu():updateLayout()
         end)
 
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-        end)
-        songButton:registerAfter("mouseClick", function(e)
             local timer = timer.start({ 
-                type = timer.real, 
-                duration = 0.5,
-                callback = createHeader })
+                        type = timer.real, 
+                        duration = 1.5,
+                        callback = function()
+                            createHeader()
+            end})
         end)
     end
 end
 
-local function createExplorePanes()
+local function createBattlePage()
+    mwse.log("creating battle page")
+
+    battlePage = page:createBlock()
+    battlePage.widthProportional = 1
+    battlePage.heightProportional = 2.5
+    battlePage.flowDirection = "top_to_bottom"
+
+    local labelBlock = battlePage:createBlock()
+    labelBlock.widthProportional = 1
+    labelBlock.heightProportional = 0.1
+    labelBlock.flowDirection = "left_to_right"
+    local leftLabel = labelBlock:createBlock()
+    leftLabel.widthProportional = 1
+    leftLabel.heightProportional = 1
+    leftLabel.childAlignX = 0.5
+    local favouritesLabel = leftLabel:createLabel({ text = "Favourites" })
+    favouritesLabel.paddingAllSides = 2
+    favouritesLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
+    local rightLabel = labelBlock:createBlock()
+    rightLabel.widthProportional = 1
+    rightLabel.heightProportional = 1
+    rightLabel.childAlignX = 0.5
+    local songsLabel = rightLabel:createLabel({ text = "Songs" })
+    songsLabel.paddingAllSides = 2
+    songsLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
+
+    local battlePanes = battlePage:createBlock()
+    battlePanes.widthProportional = 1
+    battlePanes.heightProportional = 2.4
+    battlePanes.flowDirection = "left_to_right"
+
+    local favouritesPane = battlePanes:createVerticalScrollPane()
+    favouritesPane.widthProportional = 1
+    favouritesPane.heightProportional = 1
+    favouritesPane.paddingAllSides = 12
+    favouritesPane = favouritesPane:getContentElement()
+
+    constructBattleFavourites(favouritesPane)
+
+    local battlePane = battlePanes:createVerticalScrollPane()
+    battlePane.widthProportional = 1
+    battlePane.heightProportional = 1
+    battlePane.paddingAllSides = 8
+    battlePane = battlePane:getContentElement()
+
+    for _, track in pairs(getSongTable("Battle")) do
+        local row = battlePane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 1
+        row.autoHeight = true
+        row.autoWidth = true
+        local addFaveButton = row:createButton({ text = "+" })
+        addFaveButton.paddingAllSides = 1
+        addFaveButton.maxWidth = 25
+        addFaveButton:register("mouseClick", function(e)
+            this.config.battleFavourites[track.fileName] = track
+            favouritesPane:destroyChildren()
+            constructBattleFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            playSong(track.filePath)
+            local timer = timer.start({ 
+                        type = timer.real, 
+                        duration = 1.5,
+                        callback = function()
+                            createHeader()
+            end })
+        end)
+    end
+
+    mwse.log(battlePanes.visible)
+    battlePanes:getTopLevelMenu():updateLayout()
+    return battlePanes
+end
+
+local function createExplorePage()
     mwse.log("creating explore panes")
 
     explorePage = page:createBlock()
@@ -214,7 +314,7 @@ local function createExplorePanes()
     favouritesPane.paddingAllSides = 12
     favouritesPane = favouritesPane:getContentElement()
 
-    constructFavourites(favouritesPane)
+    constructExploreFavourites(favouritesPane)
 
     local explorePane = explorePanes:createVerticalScrollPane()
     explorePane.widthProportional = 1
@@ -234,21 +334,19 @@ local function createExplorePanes()
         addFaveButton:register("mouseClick", function(e)
             this.config.exploreFavourites[track.fileName] = track
             favouritesPane:destroyChildren()
-            constructFavourites(favouritesPane)
+            constructExploreFavourites(favouritesPane)
             favouritesPane:getTopLevelMenu():updateLayout()
         end)
 
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
-            mwse.log("mouseclick")
             playSong(track.filePath)
-        end)
-        songButton:registerAfter("mouseClick", function(e)
-            mwse.log("Starting timer")
             local timer = timer.start({ 
-                type = timer.real, 
-                duration = 1,
-                callback = createHeader()})
+                        type = timer.real, 
+                        duration = 1.5,
+                        callback = function()
+                            createHeader()
+            end })
         end)
     end
 
@@ -293,6 +391,7 @@ local function createOptionsBlock(optionsBlock)
             -- end
             explorePage.visible = true
             optionsPage.visible = false
+            battlePage.visible = false
             -- labelBlock:getTopLevelMenu():updateLayout()
             -- explorePanes:getTopLevelMenu():updateLayout()
             return
@@ -301,6 +400,34 @@ local function createOptionsBlock(optionsBlock)
 
     local battleButton = optionsBlock:createButton()
     battleButton.text = "Battle"
+    battleButton:register("mouseClick", function(e)
+        if(battlePage.visible == true) then
+            for _, pageChild in pairs(battlePage.children) do
+                pageChild.visible = false
+            end
+            -- for _, labelChild in pairs(labelBlock.children) do
+            --     labelChild.visible = false
+            -- end
+            battlePage.visible = false
+            -- labelBlock:getTopLevelMenu():updateLayout()
+            -- explorePanes:getTopLevelMenu():updateLayout()
+            return
+        end
+        if (battlePage.visible == false) then
+            for _, pageChild in pairs(battlePage.children) do
+                pageChild.visible = true
+            end
+            -- for _, labelChild in pairs(labelBlock.children) do
+            --     labelChild.visible = true
+            -- end
+            battlePage.visible = true
+            optionsPage.visible = false
+            explorePage.visible = false
+            -- labelBlock:getTopLevelMenu():updateLayout()
+            -- explorePanes:getTopLevelMenu():updateLayout()
+            return
+        end
+    end)
 
     local optionsButton = optionsBlock:createButton()
     optionsButton.text = "Options"
@@ -318,6 +445,8 @@ local function createOptionsBlock(optionsBlock)
                 optionChild.visible = true
             end
             optionsPage.visible = true
+            battlePage.visible = false
+            explorePage.visible = false
         end
     end)
 end
@@ -347,9 +476,11 @@ function this.onCreate(parent)
     optionsBlock.paddingAllSides = 2
     createOptionsBlock(optionsBlock)
     
-    createExplorePanes()
+    createExplorePage()
+    createBattlePage()
     createOptionsPage()
     explorePage.visible = true
+    battlePage.visible = false
     optionsPage.visible = false
 end
 
