@@ -31,13 +31,7 @@ end
 local function createHeader()
     -- Header
     if(mainHeaderBlock.children ~= nil) then
-        -- if (currentTrack ~= nil) then
-        --     if (currentTrack.text ~= nil) then
-        --         currentTrack.text = nil
-        --     end
-        -- end
         mainHeaderBlock:destroyChildren()
-        -- currentTrack.text = getCurrentTrack()
         mainHeaderBlock:getTopLevelMenu():updateLayout()
     end
     local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
@@ -54,9 +48,23 @@ local function addSettings()
     local settingsCategory = optionsPage:createLabel({ text = "Settings" })
     settingsCategory.color = tes3ui.getPalette(tes3.palette.headerColor)
 
-    local hotkeyLabel = optionsPage:createLabel({ text = "Set a hotkey to open the Songbird menu. Default is m (for 'music'). "})
-    local key = tostring(this.config.accessMenuKey["keyCode"])
-    local hotkeyButton = optionsPage:createButton({ text = key })
+    local hotkeyBlock = optionsPage:createBlock()
+    hotkeyBlock.widthProportional = 1
+    hotkeyBlock.heightProportional = 0.2
+    local keybinder = mwse.mcm.createKeyBinder(hotkeyBlock, {label = "Set a hotkey to open the Songbird menu. Default is #. May be BACKSLASH on your keyboard. \n Requires game restart to take effect.", 
+        allowCombinations = true, 
+        variable = mwse.mcm.createTableVariable{
+            id = "accessMenuKey", 
+            table = this.config, 
+            restartRequired = false, 
+            defaultSetting = { 
+                keyCode = 43, 
+                isShiftDown = false, 
+                isAltDown = false, 
+                isControlDown = false, 
+                isSuperDown = false }
+            }})
+    mwse.saveConfig("Songbird", this.config)
 
     local settingsHeader = optionsPage:createBlock()
     settingsHeader.widthProportional = 1
@@ -73,23 +81,6 @@ local function addSettings()
 
     local credits = optionsPage:createLabel({ text = creditsList })
     credits.wrapText = true
-    -- Settings: Access Hotkey
-    -- settingsCategory:createKeyBinder{ 
-    --     label = "Set hotkey to access Songbird menu", 
-    --     allowCombinations = true, 
-    --     variable = mwse.mcm.createTableVariable{
-    --         id = "accessMenuKey", 
-    --         table = config, 
-    --         restartRequired = false, 
-    --         defaultSetting = { 
-    --             keyCode = tes3.scanCode.m, 
-    --             isShiftDown = false, 
-    --             isAltDown = false, 
-    --             isControlDown = false, 
-    --             isSuperDown = false }
-    --         }
-    --     }
-
 end
 
 local function getSongTable(folderName)
@@ -141,6 +132,9 @@ local function constructBattleFavourites(favouritesPane)
 end
 
 local function constructExploreFavourites(favouritesPane)
+    if (this.config.exploreFavourites == nil or not this.config.exploreFavourites) then
+        return
+    end
     for _, track in pairs(this.config.exploreFavourites) do
         local row = favouritesPane:createBlock({})
         row.flowDirection = "left_to_right"
