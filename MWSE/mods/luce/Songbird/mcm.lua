@@ -1,9 +1,11 @@
 local this = {}
 
+local playSongTimer ---@type mwseTimer?
 local page = {}
 local mainHeaderBlock = {}
 local battlePage = {}
 local explorePage = {}
+local customPage = {}
 local labelBlock = {}
 local optionsPage = {}
 local currentTrack = {}
@@ -11,11 +13,7 @@ local creditsList = "* Spammer, NullCascade, Merlord, Hrnchamd, abot, kindi, lon
   .. "I spent so much time looking at your code trying to figure out how the heck Lua works\n"
   .. "* Herbert for your encouragement and kind explanations of how the UI code works and getting the hotkey working for me\n"
   .. "* Safebox for help and advice about how lua works and for listening to a heck of a lot of frustrated ranting\n" 
-  .. "* DimNussens for Baandari Dreams which inspired me to make this mod"
-
-local function playSong(song)
-    tes3.worldController.audioController:changeMusicTrack(song)
-end
+  .. "* DimNussens for Baandari Dreams which inspired me to make this mod, and for suggesting the name. Wouldn't have done it without you!"
 
 local function getCurrentTrack() 
     local track = tes3.worldController.audioController.currentMusicFilePath
@@ -30,6 +28,11 @@ end
 
 local function createHeader()
     -- Header
+
+    if not (this.config.enableCurrentTrack == true) then 
+        local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
+        return 
+    end
     if(mainHeaderBlock.children ~= nil) then
         mainHeaderBlock:destroyChildren()
         mainHeaderBlock:getTopLevelMenu():updateLayout()
@@ -43,6 +46,26 @@ local function createHeader()
     currentTrack:getTopLevelMenu():updateLayout()
 end
 
+local function playSong(song)
+    if not (tes3.getFileExists(song)) then 
+        tes3.messageBox("Song no longer present in files. Is the music mod still enabled? If not, please remove from favourites.")
+        return
+    end
+    tes3.worldController.audioController:changeMusicTrack(song)
+
+    -- cancel the previous timer if it was running
+    -- might be better to do `playSong:reset()` and then `return end`, idk
+    if playSongTimer then
+        playSongTimer:cancel()
+    end
+    -- start a new timer
+    playSongTimer = timer.start{ 
+        type = timer.real, 
+        duration = 1.5,
+        callback = createHeader
+    }
+end
+
 local function addSettings()
     -- Settings
     local settingsCategory = optionsPage:createLabel({ text = "Settings" })
@@ -51,7 +74,8 @@ local function addSettings()
     local hotkeyBlock = optionsPage:createBlock()
     hotkeyBlock.widthProportional = 1
     hotkeyBlock.heightProportional = 0.2
-    local keybinder = mwse.mcm.createKeyBinder(hotkeyBlock, {label = "Set a hotkey to open the Songbird menu. Default is #. May be BACKSLASH on your keyboard. \n Requires game restart to take effect.", 
+    hotkeyBlock.flowDirection = "top_to_bottom"
+    local keybinder = mwse.mcm.createKeyBinder(hotkeyBlock, {label = "Set a hotkey to open the Songbird menu. Default is #. May be BACKSLASH on your keyboard.", 
         allowCombinations = true, 
         variable = mwse.mcm.createTableVariable{
             id = "accessMenuKey", 
@@ -64,7 +88,6 @@ local function addSettings()
                 isControlDown = false, 
                 isSuperDown = false }
             }})
-    mwse.saveConfig("Songbird", this.config)
 
     local settingsHeader = optionsPage:createBlock()
     settingsHeader.widthProportional = 1
@@ -107,7 +130,6 @@ local function constructBattleFavourites(favouritesPane)
         row.borderBottom = 5
         row.autoHeight = true
         row.autoWidth = true
-        -- row.childAlignY = 0.5
 
         local removeFaveButton = row:createButton({ text = "-" })
         removeFaveButton.paddingAllSides = 2
@@ -121,12 +143,6 @@ local function constructBattleFavourites(favouritesPane)
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end})
         end)
     end
 end
@@ -141,7 +157,6 @@ local function constructExploreFavourites(favouritesPane)
         row.borderBottom = 5
         row.autoHeight = true
         row.autoWidth = true
-        -- row.childAlignY = 0.5
 
         local removeFaveButton = row:createButton({ text = "-" })
         removeFaveButton.paddingAllSides = 2
@@ -155,12 +170,33 @@ local function constructExploreFavourites(favouritesPane)
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end})
+        end)
+    end
+end
+
+local function constructCustomFavourites(favouritesPane)
+    if (this.config.customFavourites == nil or not this.config.customFavourites) then
+        return
+    end
+    for _, track in pairs(this.config.customFavourites) do
+        local row = favouritesPane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 5
+        row.autoHeight = true
+        row.autoWidth = true
+
+        local removeFaveButton = row:createButton({ text = "-" })
+        removeFaveButton.paddingAllSides = 2
+        removeFaveButton:register("mouseClick", function(e)
+            this.config.customFavourites[track.fileName] = nil
+            favouritesPane:destroyChildren()
+            constructCustomFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            playSong(track.filePath)
         end)
     end
 end
@@ -192,7 +228,7 @@ local function createBattlePage()
 
     local battlePanes = battlePage:createBlock()
     battlePanes.widthProportional = 1
-    battlePanes.heightProportional = 2.4
+    battlePanes.heightProportional = 1.83
     battlePanes.flowDirection = "left_to_right"
 
     local favouritesPane = battlePanes:createVerticalScrollPane()
@@ -228,12 +264,6 @@ local function createBattlePage()
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end })
         end)
     end
 end
@@ -265,7 +295,7 @@ local function createExplorePage()
 
     local explorePanes = explorePage:createBlock()
     explorePanes.widthProportional = 1
-    explorePanes.heightProportional = 2.4
+    explorePanes.heightProportional = 1.83
     explorePanes.flowDirection = "left_to_right"
 
     local favouritesPane = explorePanes:createVerticalScrollPane()
@@ -301,12 +331,74 @@ local function createExplorePage()
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end })
+        end)
+    end
+
+end
+
+local function createCustomPage()
+    customPage = page:createBlock()
+    customPage.widthProportional = 1
+    customPage.heightProportional = 2.5
+    customPage.flowDirection = "top_to_bottom"
+
+    local labelBlock = customPage:createBlock()
+    labelBlock.widthProportional = 1
+    labelBlock.heightProportional = 0.1
+    labelBlock.flowDirection = "left_to_right"
+    local leftLabel = labelBlock:createBlock()
+    leftLabel.widthProportional = 1
+    leftLabel.heightProportional = 1
+    leftLabel.childAlignX = 0.5
+    local favouritesLabel = leftLabel:createLabel({ text = "Favourites" })
+    favouritesLabel.paddingAllSides = 2
+    favouritesLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
+    local rightLabel = labelBlock:createBlock()
+    rightLabel.widthProportional = 1
+    rightLabel.heightProportional = 1
+    rightLabel.childAlignX = 0.5
+    local songsLabel = rightLabel:createLabel({ text = "Songs" })
+    songsLabel.paddingAllSides = 2
+    songsLabel.color = tes3ui.getPalette(tes3.palette.headerColor)
+
+    local customPanes = customPage:createBlock()
+    customPanes.widthProportional = 1
+    customPanes.heightProportional = 1.83
+    customPanes.flowDirection = "left_to_right"
+
+    local favouritesPane = customPanes:createVerticalScrollPane()
+    favouritesPane.widthProportional = 1
+    favouritesPane.heightProportional = 1
+    favouritesPane.paddingAllSides = 12
+    favouritesPane = favouritesPane:getContentElement()
+
+    constructCustomFavourites(favouritesPane)
+
+    local customPane = customPanes:createVerticalScrollPane()
+    customPane.widthProportional = 1
+    customPane.heightProportional = 1
+    customPane.paddingAllSides = 8
+    customPane = customPane:getContentElement()
+
+    for _, track in pairs(getSongTable("Songbird")) do
+        local row = customPane:createBlock({})
+        row.flowDirection = "left_to_right"
+        row.borderBottom = 1
+        row.autoHeight = true
+        row.autoWidth = true
+        local addFaveButton = row:createButton({ text = "+" })
+        addFaveButton.paddingAllSides = 1
+        addFaveButton.maxWidth = 25
+        addFaveButton:register("mouseClick", function(e)
+            this.config.customFavourites[track.fileName] = track
+            favouritesPane:destroyChildren()
+            constructCustomFavourites(favouritesPane)
+            favouritesPane:getTopLevelMenu():updateLayout()
+        end)
+
+        local songButton = row:createButton({ text = track.fileName })
+        songButton:register("mouseClick", function(e)
+            playSong(track.filePath)
         end)
     end
 
@@ -341,6 +433,7 @@ local function createOptionsBlock(optionsBlock)
             explorePage.visible = true
             optionsPage.visible = false
             battlePage.visible = false
+            customPage.visible = false
             return
         end
     end)
@@ -360,6 +453,29 @@ local function createOptionsBlock(optionsBlock)
                 pageChild.visible = true
             end
             battlePage.visible = true
+            optionsPage.visible = false
+            customPage.visible = false
+            explorePage.visible = false
+            return
+        end
+    end)
+
+    local customButton = optionsBlock:createButton()
+    customButton.text = "Custom"
+    customButton:register("mouseClick", function(e)
+        if(customPage.visible == true) then
+            for _, pageChild in pairs(customPage.children) do
+                pageChild.visible = false
+            end
+            customPage.visible = false
+            return
+        end
+        if (customPage.visible == false) then
+            for _, pageChild in pairs(customPage.children) do
+                pageChild.visible = true
+            end
+            customPage.visible = true
+            battlePage.visible = false
             optionsPage.visible = false
             explorePage.visible = false
             return
@@ -383,6 +499,7 @@ local function createOptionsBlock(optionsBlock)
             end
             optionsPage.visible = true
             battlePage.visible = false
+            customPage.visible = false
             explorePage.visible = false
         end
     end)
@@ -415,13 +532,18 @@ function this.onCreate(parent)
     
     createExplorePage()
     createBattlePage()
+    createCustomPage()
     createOptionsPage()
     explorePage.visible = true
     battlePage.visible = false
+    customPage.visible = false
     optionsPage.visible = false
 end
 
 function this.onClose(_)
+    if playSongTimer then
+        playSongTimer:cancel()
+    end
     mwse.saveConfig("Songbird", this.config)
 end
 

@@ -1,16 +1,12 @@
 local modName = "Songbird"
 local version = "v1.0"
 
--- local config = mwse.loadConfig(modName, { 
---     enabled = true,
---     exploreFavourites = {},
---     battleFavourites = {}
---  })
 local mcm = require("luce.songbird.mcm")
 local config = mwse.loadConfig("Songbird", { 
     enabled = true,
     exploreFavourites = {},
     battleFavourites = {},
+    customFavourites = {},
     accessMenuKey = { 
         keyCode = 83, 
         isShiftDown = false, 
@@ -19,12 +15,6 @@ local config = mwse.loadConfig("Songbird", {
         isSuperDown = false }
     })
 mcm.config = config
--- mcm.config = config
--- mcm.config = mwse.loadConfig("Songbird", { 
---         enabled = true,
---         exploreFavourites = {},
---         battleFavourites = {}
---      })
 
 -- thank you herbert
 local function openSongbirdMenu(menu)
@@ -45,8 +35,10 @@ local function openSongbirdMenu(menu)
 end
 
 -- thank you herbert
-local function songbirdShortcut()
-    mwse.log("detected key")
+local function songbirdShortcut(e)
+    if not tes3.isKeyEqual({ expected = config.accessMenuKey, actual = e }) then
+        return
+    end
     -- if we couldn't open the menu
     if tes3.onMainMenu() then
         return
@@ -68,10 +60,7 @@ local function registerModConfig()
 	mwse.registerModConfig(modName, mcm)
 end
 event.register(tes3.event.modConfigReady, registerModConfig)
-
-mwse.log(config.accessMenuKey.keyCode)
-mwse.log(mcm.config.accessMenuKey.keyCode)
-event.register(tes3.event.keyDown, songbirdShortcut, { filter = mcm.config.accessMenuKey.keyCode })
+event.register(tes3.event.keyDown, songbirdShortcut)
 
 local function onInitialized()
     mwse.log("[" .. modName .. " " .. version .. "] initialised")
