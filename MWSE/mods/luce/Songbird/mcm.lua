@@ -1,5 +1,7 @@
 local this = {}
 
+local playSongTimer ---@type mwseTimer?
+
 local page = {}
 local mainHeaderBlock = {}
 local battlePage = {}
@@ -11,11 +13,7 @@ local creditsList = "* Spammer, NullCascade, Merlord, Hrnchamd, abot, kindi, lon
   .. "I spent so much time looking at your code trying to figure out how the heck Lua works\n"
   .. "* Herbert for your encouragement and kind explanations of how the UI code works and getting the hotkey working for me\n"
   .. "* Safebox for help and advice about how lua works and for listening to a heck of a lot of frustrated ranting\n" 
-  .. "* DimNussens for Baandari Dreams which inspired me to make this mod"
-
-local function playSong(song)
-    tes3.worldController.audioController:changeMusicTrack(song)
-end
+  .. "* DimNussens for Baandari Dreams which inspired me to make this mod, and for suggesting the name. Wouldn't have done it without you!"
 
 local function getCurrentTrack() 
     local track = tes3.worldController.audioController.currentMusicFilePath
@@ -30,6 +28,11 @@ end
 
 local function createHeader()
     -- Header
+
+    if not (this.config.enableCurrentTrack == true) then 
+        local title = mainHeaderBlock:createLabel({ text = "SONGBIRD \n" })
+        return 
+    end
     if(mainHeaderBlock.children ~= nil) then
         mainHeaderBlock:destroyChildren()
         mainHeaderBlock:getTopLevelMenu():updateLayout()
@@ -41,6 +44,23 @@ local function createHeader()
     currentTrack.text = tostring(getCurrentTrack())
     currentTrack:getTopLevelMenu():updateLayout()
     currentTrack:getTopLevelMenu():updateLayout()
+    -- mwse.mcm.createInfo( mainHeaderBlock, { text = getCurrentTrack(),
+    --     postCreate = function(self)
+    --         self.elements.info.text = getCurrentTrack()
+    --     end })
+end
+
+local function playSong(song)
+    tes3.worldController.audioController:changeMusicTrack(song)
+    mwse.log(this.config.enableCurrentTrack)
+    if (this.config.enableCurrentTrack == true) then 
+        playSongTimer = timer.start{ 
+            type = timer.real, 
+            duration = 1.5,
+            callback = function()
+                createHeader()
+        end}
+    end
 end
 
 local function addSettings()
@@ -51,7 +71,8 @@ local function addSettings()
     local hotkeyBlock = optionsPage:createBlock()
     hotkeyBlock.widthProportional = 1
     hotkeyBlock.heightProportional = 0.2
-    local keybinder = mwse.mcm.createKeyBinder(hotkeyBlock, {label = "Set a hotkey to open the Songbird menu. Default is #. May be BACKSLASH on your keyboard. \n Requires game restart to take effect.", 
+    hotkeyBlock.flowDirection = "top_to_bottom"
+    local keybinder = mwse.mcm.createKeyBinder(hotkeyBlock, {label = "Set a hotkey to open the Songbird menu. Default is #. May be BACKSLASH on your keyboard.", 
         allowCombinations = true, 
         variable = mwse.mcm.createTableVariable{
             id = "accessMenuKey", 
@@ -64,7 +85,14 @@ local function addSettings()
                 isControlDown = false, 
                 isSuperDown = false }
             }})
-    mwse.saveConfig("Songbird", this.config)
+    -- mwse.saveConfig("Songbird", this.config)
+
+    local showCurrentTrackButton = mwse.mcm.createYesNoButton(optionsPage, {
+        label = "Show currently playing track? Requires closing the Songbird menu to see a change.\n",
+        variable = mwse.mcm:createTableVariable({ id = "enableCurrentTrack", table = this.config, defaultSetting = true })
+    })
+    local showCurrentTrackExplanation = optionsPage:createLabel({ text = "There is a delay of 1.5s while the track UI updates, and if you close the menu during those 1.5s the game will crash. This happens particularly often when using the hotkey to open/close the menu. \n You may wish to toggle the display off if you prefer being able to speedily open and close the menu to being able to see the current song's name.\n\n"})
+    showCurrentTrackExplanation.wrapText = true
 
     local settingsHeader = optionsPage:createBlock()
     settingsHeader.widthProportional = 1
@@ -121,12 +149,6 @@ local function constructBattleFavourites(favouritesPane)
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end})
         end)
     end
 end
@@ -155,12 +177,12 @@ local function constructExploreFavourites(favouritesPane)
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end})
+            -- local timer = timer.start({ 
+            --             type = timer.real, 
+            --             duration = 1.5,
+            --             callback = function()
+            --                 createHeader()
+            -- end})
         end)
     end
 end
@@ -192,7 +214,7 @@ local function createBattlePage()
 
     local battlePanes = battlePage:createBlock()
     battlePanes.widthProportional = 1
-    battlePanes.heightProportional = 2.4
+    battlePanes.heightProportional = 1.83
     battlePanes.flowDirection = "left_to_right"
 
     local favouritesPane = battlePanes:createVerticalScrollPane()
@@ -228,12 +250,12 @@ local function createBattlePage()
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end })
+            -- local timer = timer.start({ 
+            --             type = timer.real, 
+            --             duration = 1.5,
+            --             callback = function()
+            --                 createHeader()
+            -- end })
         end)
     end
 end
@@ -265,7 +287,7 @@ local function createExplorePage()
 
     local explorePanes = explorePage:createBlock()
     explorePanes.widthProportional = 1
-    explorePanes.heightProportional = 2.4
+    explorePanes.heightProportional = 1.83
     explorePanes.flowDirection = "left_to_right"
 
     local favouritesPane = explorePanes:createVerticalScrollPane()
@@ -301,12 +323,12 @@ local function createExplorePage()
         local songButton = row:createButton({ text = track.fileName })
         songButton:register("mouseClick", function(e)
             playSong(track.filePath)
-            local timer = timer.start({ 
-                        type = timer.real, 
-                        duration = 1.5,
-                        callback = function()
-                            createHeader()
-            end })
+            -- local timer = timer.start({ 
+            --             type = timer.real, 
+            --             duration = 1.5,
+            --             callback = function()
+            --                 createHeader()
+            -- end })
         end)
     end
 
@@ -421,7 +443,10 @@ function this.onCreate(parent)
     optionsPage.visible = false
 end
 
-function this.onClose(_)
+function this.onClose()
+    if playSongTimer then
+        playSongTimer:cancel()
+    end
     mwse.saveConfig("Songbird", this.config)
 end
 
