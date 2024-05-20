@@ -53,14 +53,19 @@ end
 local function playSong(song)
     tes3.worldController.audioController:changeMusicTrack(song)
     mwse.log(this.config.enableCurrentTrack)
-    if (this.config.enableCurrentTrack == true) then 
-        playSongTimer = timer.start{ 
-            type = timer.real, 
-            duration = 1.5,
-            callback = function()
-                createHeader()
-        end}
+    if this.config.enableCurrentTrack ~= true then return end
+
+    -- cancel the previous timer if it was running
+    -- might be better to do `playSong:reset()` and then `return end`, idk
+    if playSongTimer then
+        playSongTimer:cancel()
     end
+    -- start a new timer
+    playSongTimer = timer.start{ 
+        type = timer.real, 
+        duration = 1.5,
+        callback = createHeader
+    }
 end
 
 local function addSettings()
