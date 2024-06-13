@@ -6,6 +6,7 @@ local mainHeaderBlock = {}
 local battlePage = {}
 local explorePage = {}
 local customPage = {}
+local folderPage = {}
 local labelBlock = {}
 local optionsPage = {}
 local currentTrack = {}
@@ -414,6 +415,71 @@ local function createOptionsPage()
     addSettings()
 end
 
+local function createFolderPage()
+    folderPage = page:createBlock()
+    folderPage.widthProportional = 1
+    folderPage.heightProportional = 3.1
+    folderPage.flowDirection = "top_to_bottom"
+
+    local customPanes = folderPage:createBlock()
+    customPanes.widthProportional = 1
+    customPanes.heightProportional = 1.83
+    customPanes.flowDirection = "left_to_right"
+
+    local folderPane = customPanes:createVerticalScrollPane()
+    folderPane.widthProportional = 1
+    folderPane.heightProportional = 1
+    folderPane.paddingAllSides = 12
+    folderPane = folderPane:getContentElement()
+
+    local folderTable = {}
+    local folderSongList = {}
+    local searchDir = "Data Files/Music/" .. "Songbird" .. "/"
+    -- for filePath, dir, fileName in lfs.walkdir(searchDir) do
+    for filePath, dir, fileName in lfs.walkdir(searchDir) do
+        -- filePath = Data Files/Music/Explore/Morrowind Title.mp3
+        -- dir = Data Files/Music/Explore/
+        -- fileName = Morrowind Title.mp3
+        -- Data Files/Music/Explore/test\test.mp3, Data Files/Music/Explore/test\, test.mp3
+
+        -- local track = { fileName = fileName, dir = dir, filePath = filePath }
+        -- -- mwse.log("track: name: %s, dir: %s, path: %s", track.fileName, track.filePath, track.dir)
+
+        if not folderTable[dir] then
+            folderTable[dir] = true
+        end
+
+        if not folderSongList[dir] then
+            folderSongList[dir] = { songList = {} }
+        end
+        
+        table.insert(folderSongList[dir].songList, filePath)
+    end
+
+    mwse.log(json.encode(folderSongList))
+
+    for key, data in pairs(folderSongList) do
+        local row = folderPane:createBlock({})
+        row.flowDirection = "top_to_bottom"
+        row.borderBottom = 1
+        row.autoHeight = true
+        row.autoWidth = true
+
+        local playFolderButton = row:createButton({ text = key })
+        playFolderButton:register("mouseClick", function(e)
+            mwse.log("This folder is " .. folderSongList[key])
+        end)
+
+
+        -- local songsLabel = rightLabel:createLabel({ text = "Songs" })
+        for i, song in pairs(folderSongList[key].songList) do
+           row:createLabel({ text = song })
+        end
+    end
+
+    return folderTable
+end
+
     -- the block with the explore / battle / options buttons
 local function createOptionsBlock(optionsBlock)
     local exploreButton = optionsBlock:createButton()
@@ -434,6 +500,7 @@ local function createOptionsBlock(optionsBlock)
             optionsPage.visible = false
             battlePage.visible = false
             customPage.visible = false
+            folderPage.visible = false
             return
         end
     end)
@@ -456,6 +523,7 @@ local function createOptionsBlock(optionsBlock)
             optionsPage.visible = false
             customPage.visible = false
             explorePage.visible = false
+            folderPage.visible = false
             return
         end
     end)
@@ -478,6 +546,7 @@ local function createOptionsBlock(optionsBlock)
             battlePage.visible = false
             optionsPage.visible = false
             explorePage.visible = false
+            folderPage.visble = false
             return
         end
     end)
@@ -493,7 +562,6 @@ local function createOptionsBlock(optionsBlock)
             return
         end
         if(optionsPage.visible == false) then
-            explorePage.visible = false
             for _, optionChild in pairs(optionsPage.children) do
                 optionChild.visible = true
             end
@@ -501,6 +569,29 @@ local function createOptionsBlock(optionsBlock)
             battlePage.visible = false
             customPage.visible = false
             explorePage.visible = false
+            folderPage.visible = false
+        end
+    end)
+
+    local folderButton = optionsBlock:createButton()
+    folderButton.text = "Play Folder"
+    folderButton:register("mouseClick", function(e)
+        if(folderPage.visible == true) then
+            for _, folderChild in pairs(folderPage.children) do
+                folderChild.visible = false
+            end
+            folderPage.visible = false
+            return
+        end
+        if(folderPage.visible == false) then
+            for _, folderChild in pairs(folderPage.children) do
+                folderChild.visible = true
+            end
+            optionsPage.visible = false
+            battlePage.visible = false
+            customPage.visible = false
+            explorePage.visible = false
+            folderPage.visible = true
         end
     end)
 end
@@ -534,10 +625,13 @@ function this.onCreate(parent)
     createBattlePage()
     createCustomPage()
     createOptionsPage()
+    createFolderPage()
+
     explorePage.visible = true
     battlePage.visible = false
     customPage.visible = false
     optionsPage.visible = false
+    folderPage.visible = false
 end
 
 function this.onClose(_)
